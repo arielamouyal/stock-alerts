@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Stock Alerts</title>
+</head>
+<body>
+    <h1>🚀 Bullish Stock Alerts</h1>
+    {% if news %}
+        <ul>
+        {% for n in news %}
+            <li><a href="{{ n['url'] }}">{{ n['title'] }}</a></li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>No bullish news found right now.</p>
+    {% endif %}
+</body>
+</html>
