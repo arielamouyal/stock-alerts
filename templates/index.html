@@ -2,17 +2,46 @@
 <html>
 <head>
     <title>Stock Alerts</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
+        h1 { color: #333; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+        th { background: #333; color: white; }
+        .news { margin: 10px 0; padding: 10px; background: white; border: 1px solid #ccc; }
+    </style>
 </head>
 <body>
-    <h1>🚀 Bullish Stock Alerts</h1>
-    {% if news %}
-        <ul>
-        {% for n in news %}
-            <li><a href="{{ n['url'] }}">{{ n['title'] }}</a></li>
+    <h1>📈 Stock Alerts</h1>
+
+    <form method="POST">
+        <input type="text" name="ticker" placeholder="Add ticker (e.g. NFLX)">
+        <button type="submit">Add</button>
+    </form>
+
+    <table>
+        <tr>
+            <th>Ticker</th>
+            <th>Price</th>
+            <th>Change %</th>
+        </tr>
+        {% for stock in stocks %}
+        <tr>
+            <td>{{ stock.ticker }}</td>
+            <td>${{ stock.price }}</td>
+            <td>{{ stock.change }}%</td>
+        </tr>
+        <tr>
+            <td colspan="3">
+                {% for article in stock.news %}
+                    <div class="news">
+                        <a href="{{ article.url }}" target="_blank">{{ article.title }}</a>
+                        <small> ({{ article.source }})</small>
+                    </div>
+                {% endfor %}
+            </td>
+        </tr>
         {% endfor %}
-        </ul>
-    {% else %}
-        <p>No bullish news found right now.</p>
-    {% endif %}
+    </table>
 </body>
 </html>
