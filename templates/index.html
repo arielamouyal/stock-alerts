@@ -1,47 +1,36 @@
-<!DOCTYPE html>
+
+<!doctype html>
 <html>
 <head>
-    <title>Stock Alerts</title>
-    <style>
-        body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
-        h1 { color: #333; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
-        th { background: #333; color: white; }
-        .news { margin: 10px 0; padding: 10px; background: white; border: 1px solid #ccc; }
-    </style>
+  <meta charset="utf-8" />
+  <title>Stock Alerts — Updated</title>
+  <style>
+    body{font-family:Inter,Arial,Helvetica,sans-serif;margin:18px;background:#f7f7fb;color:#111}
+    h1{margin-bottom:6px}
+    #addForm{margin-bottom:12px}
+    table{width:100%;border-collapse:collapse;background:white}
+    th,td{padding:10px;border-bottom:1px solid #eee;text-align:left}
+    th{background:#0f172a;color:white}
+    .small{font-size:13px;color:#666}
+    .news{margin:6px 0;padding:8px;border:1px solid #e6e6e6;background:#fff}
+    .btn{padding:6px 10px;border-radius:6px;border:none;cursor:pointer}
+    .remove{background:#ef4444;color:white}
+  </style>
 </head>
 <body>
-    <h1>📈 Stock Alerts</h1>
+  <h1>📈 Stock Alerts</h1>
+  <form id="addForm">
+    <input id="tickerInput" placeholder="Add ticker, e.g. NFLX" />
+    <button id="addBtn" class="btn">Add</button>
+  </form>
 
-    <form method="POST">
-        <input type="text" name="ticker" placeholder="Add ticker (e.g. NFLX)">
-        <button type="submit">Add</button>
-    </form>
+  <table id="stocksTable">
+    <thead>
+      <tr><th>Ticker</th><th>Price</th><th>Change</th><th>News</th><th></th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
-    <table>
-        <tr>
-            <th>Ticker</th>
-            <th>Price</th>
-            <th>Change %</th>
-        </tr>
-        {% for stock in stocks %}
-        <tr>
-            <td>{{ stock.ticker }}</td>
-            <td>${{ stock.price }}</td>
-            <td>{{ stock.change }}%</td>
-        </tr>
-        <tr>
-            <td colspan="3">
-                {% for article in stock.news %}
-                    <div class="news">
-                        <a href="{{ article.url }}" target="_blank">{{ article.title }}</a>
-                        <small> ({{ article.source }})</small>
-                    </div>
-                {% endfor %}
-            </td>
-        </tr>
-        {% endfor %}
-    </table>
+<script src="/static/app.js"></script>
 </body>
 </html>

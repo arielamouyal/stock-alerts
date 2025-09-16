@@ -1,64 +1,71 @@
-from flask import Flask, render_template, request, redirect, url_for
-import requests
-import os
+
+from flask import Flask, render_template, request, redirect, url_for, jsonify
+import os, requests, time
+from utils.news_fetcher import fetch_filtered_news_for_ticker
+from utils.price_fetcher import fetch_quote
 
 app = Flask(__name__)
 
-# Your API keys
-FINNHUB_API_KEY = "d23r0t9r01qv4g01t110d23r0t9r01qv4g01t11g"
-NEWS_API_KEY = "8454b1b0714a4d569f39d36683dd358f"
+# WATCHLIST persistence (simple file)
+WATCHLIST_FILE = "watchlist.json"
+if os.path.exists(WATCHLIST_FILE):
+    import json
+    with open(WATCHLIST_FILE,"r") as f:
+        WATCHLIST = json.load(f)
+else:
+    WATCHLIST = [
+        "ABNB","MSFT","TSLA","UBER","BKNG","NVTS","COIN","MELI",
+        "AAPL","AMZN","HOOD","MAXN","MSTR","PLTR","NVDA","MARA",
+        "SBUX","SMCI","SOFI"
+    ]
+    with open(WATCHLIST_FILE,"w") as f:
+        json.dump(WATCHLIST,f)
 
-# Preloaded watchlist
-WATCHLIST = [
-    "ABNB", "MSFT", "TSLA", "UBER", "BKNG", "NVTS", "COIN",
-    "MELI", "AAPL", "AMZN", "HOOD", "MAXN", "MSTR", "PLTR",
-    "NVDA", "MARA", "SBUX", "SMCI", "SOFI"
-]
+FINNHUB_KEY = os.getenv("FINNHUB_API_KEY")
+NEWS_KEY = os.getenv("NEWS_API_KEY")
 
-def get_stock_price(ticker):
-    url = f"https://finnhub.io/api/v1/quote?symbol={ticker}&token={FINNHUB_API_KEY}"
-    r = requests.get(url)
-    if r.status_code == 200:
-        data = r.json()
-        return {
-            "price": data.get("c", "N/A"),
-            "change": data.get("dp", "N/A")
-        }
-    return {"price": "N/A", "change": "N/A"}
-
-def get_stock_news(ticker):
-    url = f"https://newsapi.org/v2/everything?q={ticker}&apiKey={NEWS_API_KEY}&pageSize=3&sortBy=publishedAt"
-    r = requests.get(url)
-    if r.status_code == 200:
-        articles = r.json().get("articles", [])
-        return [{
-            "title": a["title"],
-            "url": a["url"],
-            "source": a["source"]["name"]
-        } for a in articles]
-    return []
-
-@app.route("/", methods=["GET", "POST"])
+@app.route("/", methods=["GET"])
 def index():
+    return render_template("index.html")
+
+@app.route("/add", methods=["POST"])
+def add():
+    ticker = request.form.get("ticker","").upper().strip()
+    if ticker and ticker not in WATCHLIST:
+        WATCHLIST.append(ticker)
+        with open(WATCHLIST_FILE,"w") as f:
+            import json
+            json.dump(WATCHLIST,f)
+    return redirect(url_for("index"))
+
+@app.route("/remove/<ticker>", methods=["POST"])
+def remove(ticker):
+    ticker = ticker.upper().strip()
     global WATCHLIST
-    if request.method == "POST":
-        new_ticker = request.form.get("ticker").upper().strip()
-        if new_ticker and new_ticker not in WATCHLIST:
-            WATCHLIST.append(new_ticker)
-        return redirect(url_for("index"))
+    WATCHLIST = [t for t in WATCHLIST if t!=ticker]
+    with open(WATCHLIST_FILE,"w") as f:
+        import json
+        json.dump(WATCHLIST,f)
+    return ("",204)
 
-    stocks_data = []
-    for ticker in WATCHLIST:
-        price_info = get_stock_price(ticker)
-        news_info = get_stock_news(ticker)
-        stocks_data.append({
-            "ticker": ticker,
-            "price": price_info["price"],
-            "change": price_info["change"],
-            "news": news_info
+@app.route("/api/stocks", methods=["GET"])
+def api_stocks():
+    stocks = []
+    for t in WATCHLIST:
+        q = fetch_quote(t, FINNHUB_KEY)
+        news = []
+        try:
+            news = fetch_filtered_news_for_ticker(t, NEWS_KEY)
+        except Exception:
+            news = []
+        stocks.append({
+            "ticker": t,
+            "price": q.get("price"),
+            "change": q.get("change"),
+            "change_percent": q.get("change_percent"),
+            "news": news
         })
-
-    return render_template("index.html", stocks=stocks_data)
+    return jsonify({"stocks": stocks, "timestamp": int(time.time())})
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT",5000)))
