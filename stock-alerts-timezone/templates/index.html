@@ -1,0 +1,95 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Stock Alerts</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #f4f4f4; }
+    .positive { color: green; }
+    .negative { color: red; }
+    .meta { margin: 8px 0 16px; color: #555; font-size: 0.95rem; }
+    .meta span { margin-right: 18px; }
+  </style>
+  <script>
+    const FORCE_TZ = null; // set to "America/New_York" to force US/Eastern
+    function fmtTime(d){
+      const opts = {hour:'2-digit', minute:'2-digit', second:'2-digit',
+        hour12:false, timeZone: FORCE_TZ || Intl.DateTimeFormat().resolvedOptions().timeZone};
+      return new Intl.DateTimeFormat([], opts).format(d);
+    }
+    function tzLabel(){ return FORCE_TZ || Intl.DateTimeFormat().resolvedOptions().timeZone; }
+    async function refreshPrices(){
+      try{
+        const res = await fetch(window.location.href, {cache:"no-store"});
+        const text = await res.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, "text/html");
+        const newRows = doc.querySelectorAll("table tr");
+        const oldRows = document.querySelectorAll("table tr");
+        for (let i=1; i<newRows.length && i<oldRows.length; i++){
+          const newCells = newRows[i].querySelectorAll("td");
+          const oldCells = oldRows[i].querySelectorAll("td");
+          if(newCells.length>=4 && oldCells.length>=4){
+            oldCells[1].innerHTML=newCells[1].innerHTML;
+            oldCells[2].innerHTML=newCells[2].innerHTML;
+            oldCells[3].innerHTML=newCells[3].innerHTML;
+          }
+        }
+        document.getElementById("lastPriceUpdate").textContent=fmtTime(new Date());
+      }catch(err){console.error("Price refresh failed:",err);}
+    }
+    async function refreshNews(){
+      try{
+        const res = await fetch(window.location.href, {cache:"no-store"});
+        const text=await res.text();
+        const parser=new DOMParser();
+        const doc=parser.parseFromString(text,"text/html");
+        const newTable=doc.querySelector("table");
+        document.querySelector("table").innerHTML=newTable.innerHTML;
+        document.getElementById("lastNewsUpdate").textContent=fmtTime(new Date());
+      }catch(err){console.error("News refresh failed:",err);}
+    }
+    window.addEventListener("DOMContentLoaded",()=>{
+      const label=tzLabel();
+      document.getElementById("tzLabel1").textContent=label;
+      document.getElementById("tzLabel2").textContent=label;
+      const now=fmtTime(new Date());
+      document.getElementById("lastPriceUpdate").textContent=now;
+      document.getElementById("lastNewsUpdate").textContent=now;
+      setInterval(refreshPrices,5000);
+      setInterval(refreshNews,60000);
+    });
+  </script>
+</head>
+<body>
+  <h1>📈 Stock Alerts Watchlist</h1>
+  <div class="meta">
+    <span>💹 Prices last updated (<span id="tzLabel1"></span>): <strong id="lastPriceUpdate">--:--:--</strong></span>
+    <span>📰 News last updated (<span id="tzLabel2"></span>): <strong id="lastNewsUpdate">--:--:--</strong></span>
+  </div>
+  <form method="POST">
+    <input type="text" name="ticker" placeholder="Add Ticker (e.g. AAPL)" required>
+    <button type="submit" name="add">Add</button>
+  </form>
+  <table>
+    <tr><th>Ticker</th><th>Price</th><th>Change</th><th>% Change</th><th>Remove</th></tr>
+    {% for stock in stocks %}
+    <tr>
+      <td>{{ stock.ticker }}</td>
+      <td>${{ "%.2f"|format(stock.price) }}</td>
+      <td class="{{ 'positive' if stock.change >= 0 else 'negative' }}">{{ "%.2f"|format(stock.change) }}</td>
+      <td class="{{ 'positive' if stock.percent_change >= 0 else 'negative' }}">{{ "%.2f"|format(stock.percent_change) }}%</td>
+      <td><form method="POST" style="display:inline;"><button type="submit" name="remove" value="{{ stock.ticker }}">Remove</button></form></td>
+    </tr>
+    <tr>
+      <td colspan="5"><strong>News:</strong><ul>
+        {% for article in stock.news %}<li><a href="{{ article.url }}" target="_blank">{{ article.title }}</a></li>{% endfor %}
+      </ul></td>
+    </tr>
+    {% endfor %}
+  </table>
+</body>
+</html>
